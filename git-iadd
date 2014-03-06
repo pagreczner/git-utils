@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby
+
+
+git_command = 'git status'
+
+git_result = `#{git_command}`
+
+split_lines = git_result.split /\n/
+
+found_unstaged = false
+found_untracked = false
+
+unstaged_array = []
+
+modified_count = 1
+
+unstaged_index = ARGV[0].to_s
+
+if unstaged_index.nil?
+  puts "Improper index. Please run `git istatus` to see indices. "
+  return
+end
+
+
+# Loop over all the lines
+split_lines.each do |line|
+
+  # Strip the lines of white space
+  line = line.strip
+
+  # Remove special characters
+  line = line.gsub("\t",' ').gsub("\e",'').gsub("[32m",' ').gsub("[m", ' ').gsub("[33m", ' ').gsub("[36m",' ').gsub('#', ' ')
+  line = line.strip
+
+
+  # Check if we are in the unstaged portion of git_command
+  if not found_unstaged
+    found_unstaged = !(line.downcase.index("changes not staged for commit").nil?)
+  end
+
+  # Go to the next line unless we have found unstaged 
+  next unless found_unstaged
+
+  if not found_untracked
+    found_untracked = !(line.downcase.index("untracked files:").nil?)
+  end
+
+  # Go to the next line if we are done with the modified section
+  next if found_untracked
+
+
+  # Check if the line is 'modified' prefixed
+  line_tokens = line.split(/\ /).collect {|l| l.strip}
+
+  next unless (not line_tokens.empty?) and (line_tokens[0] == 'modified:')
+
+  source_file = line_tokens[1..-1].collect {|lt| lt.strip}.join("")
+  unstaged_array << source_file
+
+  modified_count += 1
+end
+
+indices = unstaged_index.split(",").collect {|ind| ind.to_i}.uniq
+
+indices.each do |ind|
+  next unless (ind > 0 &&   ind < modified_count)
+  unstaged_file = unstaged_array[ind-1]
+  puts "Staging...\t#{unstaged_file}"
+  begin
+    git_add_result = `git add #{unstaged_file}`
+  rescue Exception => exc
+    puts "There was a problem adding:\t#{unstaged_file}"
+  end
+end
+
+puts `git status`
+
+

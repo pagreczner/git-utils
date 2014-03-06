@@ -1,0 +1,70 @@
+#!/usr/bin/env ruby
+
+
+# Print out the git status with modified count #'s
+
+git_command = 'git status'
+
+git_result = `#{git_command}`
+
+split_lines = git_result.split /\n/
+
+found_unstaged = false
+found_untracked = false
+
+modified_count = 1
+
+# Loop over all the lines
+split_lines.each do |line|
+
+  orig_line = line.dup
+  
+  # Strip the lines of white space
+  line = line.strip
+
+  # Remove special characters
+  line = line.gsub("\t",' ').gsub("\e",'').gsub("[32m",' ').gsub("[m", ' ').gsub("[33m", ' ').gsub("[36m",' ').gsub('#', ' ')
+  line = line.strip
+
+
+  # Check if we are in the unstaged portion of git_command
+  if not found_unstaged
+    found_unstaged = !(line.downcase.index("changes not staged for commit").nil?)
+    if found_unstaged
+      puts "# Changes not staged for commit:" if found_unstaged
+      puts "# Use 'git iadd <index>', where <index> is the index of the file below to stage it for commit."
+    end
+  end
+
+  # Go to the next line unless we have found unstaged 
+  if not found_unstaged
+    puts orig_line
+  end
+  next unless found_unstaged
+
+  if not found_untracked
+    found_untracked = !(line.downcase.index("untracked files:").nil?)
+  end
+
+  # Go to the next line if we are done with the modified section
+  if found_untracked
+    puts orig_line
+  end
+  next if found_untracked
+
+
+  # Check if the line is 'modified' prefixed
+  line_tokens = line.split(/\ /).collect {|l| l.strip}
+
+  next unless (not line_tokens.empty?) and (line_tokens[0] == 'modified:')
+
+  source_file = line_tokens[1..-1].collect {|lt| lt.strip}.join("")
+
+  source_name = source_file.split("/").last
+
+  puts "#\t#{modified_count}:\t#{source_file}"
+  modified_count += 1
+  
+
+
+end
