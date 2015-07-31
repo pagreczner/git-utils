@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+git_command = 'git for-each-ref --sort=-committerdate refs/heads/'
+result = `#{git_command}`
+
+split_lines = result.split /\n/
+
+branch_map = {}
+
+def branch_name(input)
+	input.split("/").last.strip()
+end
+
+split_lines.reverse.each_with_index do |branch, i|
+	branch_map[i] = branch_name(branch)
+end
+
+puts "Branches:"
+branch_map.collect {|k,v| "#{k}\t#{v}"}.reverse.each {|g| puts g}

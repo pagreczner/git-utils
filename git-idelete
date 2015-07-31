@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+git_command = 'git for-each-ref --sort=-committerdate refs/heads/'
+result = `#{git_command}`
+
+split_lines = result.split /\n/
+
+branch_map = {}
+
+def branch_name(input)
+	input.split("/").last.strip()
+end
+
+split_lines.reverse.each_with_index do |branch, i|
+	branch_map[i] = branch_name(branch)
+end
+
+unstaged_index = ARGV[0].to_s
+
+indices = unstaged_index.split(',')
+to_remove = indices.collect {|q| q.strip().to_i}
+
+
+to_remove.each do |removal_index|
+	puts "Deleting:\t#{branch_map[removal_index]}"
+	`git branch -D #{branch_map[removal_index]}`
+end
+
+
